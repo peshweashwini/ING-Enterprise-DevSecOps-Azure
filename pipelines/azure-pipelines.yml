@@ -1,0 +1,72 @@
+trigger:
+- main
+
+pool:
+  vmImage: ubuntu-latest
+
+variables:
+  imageName: payment-service
+
+stages:
+
+- stage: Build_Test
+  displayName: Build and Test
+
+  jobs:
+  - job: MavenBuild
+    displayName: Maven Build
+
+    steps:
+    - task: JavaToolInstaller@0
+      displayName: Setup Java 17
+      inputs:
+        versionSpec: '17'
+        jdkArchitectureOption: 'x64'
+        jdkSourceOption: 'PreInstalled'
+
+    - script: mvn clean package
+      workingDirectory: application/payment-service
+      displayName: Maven Build and Unit Tests
+
+    - task: PublishBuildArtifacts@1
+      displayName: Publish JAR Artifact
+      inputs:
+        PathtoPublish: application/payment-service/target/payment-service-1.0.0.jar
+        ArtifactName: payment-service-jar
+        publishLocation: Container
+
+
+- stage: Docker_Build
+  displayName: Docker Build and Security Scan
+  dependsOn: Build_Test
+
+  jobs:
+  - job: DockerBuild
+    displayName: Build Docker Image
+
+    steps:
+    - script: |
+        docker build -t $(imageName):$(Build.BuildId) application/payment-service
+      displayName: Build Docker Image
+
+    - script: |
+        docker images $(imageName):$(Build.BuildId)
+      displayName: Verify Docker Image
+
+    - script: |
+        docker run --rm \
+          -v /var/run/docker.sock:/var/run/docker.sock \
+          aquasec/trivy:latest \
+          image \
+          --severity HIGH,CRITICAL \
+          --ignore-unfixed \
+          --exit-code 0 \
+          $(imageName):$(Build.BuildId)
+      displayName: Trivy Security Scan
+
+    - task: PublishBuildArtifacts@1
+      displayName: Publish Kubernetes Manifests
+      inputs:
+        PathtoPublish: k8s
+        ArtifactName: k8s-manifests
+        publishLocation: Container
