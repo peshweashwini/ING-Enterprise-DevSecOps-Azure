@@ -14,26 +14,25 @@ stages:
 
   jobs:
   - job: MavenBuild
-    displayName: Maven Build
+    displayName: Maven Build and Unit Tests
 
     steps:
-    - task: JavaToolInstaller@0
-      displayName: Setup Java 17
-      inputs:
-        versionSpec: '17'
-        jdkArchitectureOption: 'x64'
-        jdkSourceOption: 'PreInstalled'
-
-    - script: mvn clean package
-      workingDirectory: application/payment-service
+    - task: Maven@4
       displayName: Maven Build and Unit Tests
+      inputs:
+        mavenPomFile: 'application/payment-service/pom.xml'
+        goals: 'clean package'
+        publishJUnitResults: true
+        testResultsFiles: '**/surefire-reports/TEST-*.xml'
+        javaHomeOption: 'JDKVersion'
+        jdkVersionOption: '1.17'
 
     - task: PublishBuildArtifacts@1
       displayName: Publish JAR Artifact
       inputs:
-        PathtoPublish: application/payment-service/target/payment-service-1.0.0.jar
-        ArtifactName: payment-service-jar
-        publishLocation: Container
+        PathtoPublish: 'application/payment-service/target/payment-service-1.0.0.jar'
+        ArtifactName: 'payment-service-jar'
+        publishLocation: 'Container'
 
 
 - stage: Docker_Build
@@ -42,7 +41,7 @@ stages:
 
   jobs:
   - job: DockerBuild
-    displayName: Build Docker Image
+    displayName: Docker Build
 
     steps:
     - script: |
@@ -67,6 +66,6 @@ stages:
     - task: PublishBuildArtifacts@1
       displayName: Publish Kubernetes Manifests
       inputs:
-        PathtoPublish: k8s
-        ArtifactName: k8s-manifests
-        publishLocation: Container
+        PathtoPublish: 'k8s'
+        ArtifactName: 'k8s-manifests'
+        publishLocation: 'Container'
