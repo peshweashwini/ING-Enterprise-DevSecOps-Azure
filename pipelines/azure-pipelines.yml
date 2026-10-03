@@ -44,6 +44,23 @@ stages:
     displayName: Docker Build
 
     steps:
+    - task: DownloadBuildArtifacts@1
+      displayName: Download JAR Artifact
+      inputs:
+        buildType: 'current'
+        downloadType: 'single'
+        artifactName: 'payment-service-jar'
+        downloadPath: '$(Build.SourcesDirectory)/application/payment-service'
+
+    - script: |
+        mkdir -p application/payment-service/target
+        cp application/payment-service/payment-service-1.0.0.jar application/payment-service/target/payment-service-1.0.0.jar
+      displayName: Restore JAR to Docker Build Context
+
+    - script: |
+        find application/payment-service -type f
+      displayName: Verify Downloaded JAR
+
     - script: |
         docker build -t $(imageName):$(Build.BuildId) application/payment-service
       displayName: Build Docker Image
