@@ -34,7 +34,6 @@ stages:
         ArtifactName: 'payment-service-jar'
         publishLocation: 'Container'
 
-
 - stage: Docker_Build
   displayName: Docker Build and Security Scan
   dependsOn: Build_Test
@@ -50,16 +49,17 @@ stages:
         buildType: 'current'
         downloadType: 'single'
         artifactName: 'payment-service-jar'
-        downloadPath: '$(Build.SourcesDirectory)/application/payment-service'
+        downloadPath: '$(Pipeline.Workspace)'
 
     - script: |
         mkdir -p application/payment-service/target
-        cp application/payment-service/payment-service-1.0.0.jar application/payment-service/target/payment-service-1.0.0.jar
+        cp "$(Pipeline.Workspace)/payment-service-jar/payment-service-1.0.0.jar" "application/payment-service/target/payment-service-1.0.0.jar"
       displayName: Restore JAR to Docker Build Context
 
     - script: |
-        find application/payment-service -type f
-      displayName: Verify Downloaded JAR
+        echo "Files in Docker build context:"
+        find application/payment-service -type f | sort
+      displayName: Verify Docker Build Context
 
     - script: |
         docker build -t $(imageName):$(Build.BuildId) application/payment-service
@@ -83,6 +83,6 @@ stages:
     - task: PublishBuildArtifacts@1
       displayName: Publish Kubernetes Manifests
       inputs:
-        PathtoPublish: 'k8s'
+        PathtoPublish: 'kubernetes'
         ArtifactName: 'k8s-manifests'
         publishLocation: 'Container'
